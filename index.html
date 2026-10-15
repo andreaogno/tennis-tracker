@@ -367,6 +367,15 @@ body.kb .savebar{display:none}
 .sec .tag{white-space:nowrap}
 .sec-act .btn{white-space:nowrap;padding:0 14px;gap:8px}
 .chartbox .endv{paint-order:stroke;stroke:var(--surface);stroke-width:5px;stroke-linejoin:round}
+
+.tot{margin:-8px 2px 0;font-size:14px;color:var(--ink2)}.tot b{color:var(--ink);font-variant-numeric:tabular-nums}
+.badge.N{background:var(--surface2);color:var(--ink2);font-size:22px}
+.dots i.N{background:var(--ink2);border-color:var(--ink2);opacity:.75}
+.sec.ag .dots i.N,.hero .dots i.N{background:#fff;border-color:#fff;opacity:.85}
+.hero.am .dots i.N{background:var(--ink2);border-color:var(--ink2)}
+.cd .ds i.N{background:var(--ball);box-shadow:inset 0 0 0 1.5px var(--ink2)}
+.seg.big.three button{font-size:15px;padding:0 4px;line-height:1.15}
+.seg.big button[aria-pressed="true"].c-nc{background:var(--ink2);color:var(--surface)}
 </style>
 </head>
 <body>
@@ -405,7 +414,7 @@ const nf=(n,d=0)=>n==null||isNaN(n)?'–':Number(n).toLocaleString('it-IT',{mini
 const pct=(w,n)=>n?Math.round(w/n*100):null;
 const num=v=>{if(v===''||v==null)return null;const x=Number(String(v).replace(',','.'));return isNaN(x)?null:x};
 const SURF={terra:'Terra battuta',cemento:'Cemento',erba:'Erba',sintetico:'Sintetico',altra:'Altra'};
-const CAT={amichevole:'Amichevole',agonistico:'Agonistico'};
+const CAT={amichevole:'Allenamento',agonistico:'Agonistico'};
 const TURNI=['Girone','Qualificazioni','Primo turno','Secondo turno','Ottavi di finale','Quarti di finale','Semifinale','Finale','Altro'];
 const MET=[{k:'dur',l:'Durata',u:'min',d:0},{k:'hrAvg',l:'FC media',u:'bpm',d:0},{k:'hrMax',l:'FC max',u:'bpm',d:0},{k:'calAct',l:'Cal. attive',u:'kcal',d:0},{k:'calTot',l:'Cal. totali',u:'kcal',d:0},{k:'steps',l:'Passi',u:'',d:0},{k:'dist',l:'Distanza',u:'km',d:2},{k:'rpe',l:'Sforzo',u:'/10',d:0}];
 const I={
@@ -432,9 +441,10 @@ const isTb=s=>!s.stb&&((s.me===7&&s.opp===6)||(s.me===6&&s.opp===7));
 const scoreTxt=m=>(m.sets||[]).map(s=>s.stb?'['+s.me+'-'+s.opp+']':s.me+'-'+s.opp+(isTb(s)&&s.tb!=null?'('+s.tb+')':'')).join(' ');
 function summ(list){
   const l=[...list].sort(ord);
-  const r={n:l.length,w:0,l:0,sw:0,sl:0,gw:0,gl:0,tbW:0,tbN:0,stW:0,stN:0,cur:0,curT:'',best:0,form:[]};
+  const r={n:l.length,nc:0,w:0,l:0,sw:0,sl:0,gw:0,gl:0,tbW:0,tbN:0,stW:0,stN:0,cur:0,curT:'',best:0,form:[]};
   let wr=0;
   for(const m of l){
+    if(m.result==='N'){r.nc++;continue}
     const win=m.result==='V';
     if(win){r.w++;wr++;r.best=Math.max(r.best,wr)}else{r.l++;wr=0}
     if(m.result===r.curT)r.cur++;else{r.curT=m.result;r.cur=1}
@@ -444,7 +454,7 @@ function summ(list){
       else{r.gw+=s.me;r.gl+=s.opp;if(isTb(s)){r.tbN++;if(s.me>s.opp)r.tbW++}}
     }
   }
-  r.pct=pct(r.w,r.n);r.form=l.slice(-5).map(m=>m.result);return r;
+  r.pct=pct(r.w,r.w+r.l);r.form=l.slice(-5).map(m=>m.result);return r;
 }
 function avgPhys(list){
   const o={};
@@ -530,7 +540,7 @@ function wl(m){let w=0,l=0,gw=0,gl=0;for(const s of m.sets||[]){if(s.me>s.opp)w+
 const HEAD=['Data','Ora','Categoria','Stato','Avversario','Classifica avversario','Esito','Punteggio','Set vinti','Set persi','Game vinti','Game persi','Superficie','Circolo','Luogo','Torneo','Turno','Durata (min)','FC media (bpm)','FC max (bpm)','Calorie attive','Calorie totali','Passi','Distanza (km)','Sforzo percepito (1-10)','Note'];
 function rowOf(m,forCsv){
   const x=wl(m),p=m.phys||{},v=k=>p[k]==null?'':p[k];
-  const res=m.status==='giocato'?(m.result==='V'?'Vittoria':'Sconfitta'):'';
+  const res=m.status==='giocato'?(m.result==='V'?'Vittoria':m.result==='N'?'Non conclusa':'Sconfitta'):'';
   return [m.date,m.time||'',CAT[m.cat],m.status[0].toUpperCase()+m.status.slice(1),oppName(m.oppId),m.oppRank||'',res,scoreTxt(m),m.status==='giocato'?x.w:'',m.status==='giocato'?x.l:'',m.status==='giocato'?x.gw:'',m.status==='giocato'?x.gl:'',SURF[m.surface]||'',m.club||'',m.place||'',m.torneo||'',m.turno||'',v('dur'),v('hrAvg'),v('hrMax'),v('calAct'),v('calTot'),v('steps'),forCsv?dec(v('dist')):v('dist'),v('rpe'),m.note||''];
 }
 function exportCSV(list,label){
@@ -546,13 +556,13 @@ async function exportXLSX(){
   const mrows=[HEAD,...[...S.matches].sort(ord).map(m=>rowOf(m,false))];
   const ws1=X.utils.aoa_to_sheet(mrows);ws1['!cols']=HEAD.map((h,i)=>({wch:[10,6,12,12,24,10,10,16,8,8,8,8,14,18,14,22,16,8,8,8,8,8,8,8,10,40][i]||12}));ws1['!autofilter']={ref:'A1:'+X.utils.encode_col(HEAD.length-1)+mrows.length};
   X.utils.book_append_sheet(wb,ws1,'Partite');
-  const orows=[['Avversario','Classifica','Partite','Vittorie','Sconfitte','% vittorie','Set vinti','Set persi','Game vinti','Game persi']];
-  for(const o of S.opponents){const r=summ(playedAll().filter(m=>m.oppId===o.id));orows.push([o.name,o.rank||'',r.n,r.w,r.l,r.pct==null?'':r.pct/100,r.sw,r.sl,r.gw,r.gl])}
+  const orows=[['Avversario','Classifica','Partite','Vittorie','Sconfitte','% vittorie','Set vinti','Set persi','Game vinti','Game persi','Non concluse']];
+  for(const o of S.opponents){const r=summ(playedAll().filter(m=>m.oppId===o.id));orows.push([o.name,o.rank||'',r.n,r.w,r.l,r.pct==null?'':r.pct/100,r.sw,r.sl,r.gw,r.gl,r.nc])}
   const ws2=X.utils.aoa_to_sheet(orows);ws2['!cols']=[{wch:26},{wch:10},{wch:8},{wch:9},{wch:9},{wch:10},{wch:9},{wch:9},{wch:10},{wch:10}];
   for(let i=1;i<orows.length;i++){const c=ws2['F'+(i+1)];if(c&&c.v!=='')c.z='0%'}
   X.utils.book_append_sheet(wb,ws2,'Avversari');
-  const srows=[['Categoria','Partite','Vittorie','Sconfitte','% vittorie','Set vinti','Set persi','Game vinti','Game persi','Tie-break vinti','Tie-break giocati','Super TB vinti','Super TB giocati']];
-  for(const [lab,c] of [['Amichevoli','amichevole'],['Agonismo','agonistico'],['Totale','']]){const r=summ(byCat(c));srows.push([lab,r.n,r.w,r.l,r.pct==null?'':r.pct/100,r.sw,r.sl,r.gw,r.gl,r.tbW,r.tbN,r.stW,r.stN])}
+  const srows=[['Categoria','Partite','Vittorie','Sconfitte','% vittorie','Set vinti','Set persi','Game vinti','Game persi','Tie-break vinti','Tie-break giocati','Super TB vinti','Super TB giocati','Non concluse']];
+  for(const [lab,c] of [['Allenamento','amichevole'],['Agonismo','agonistico'],['Totale','']]){const r=summ(byCat(c));srows.push([lab,r.n,r.w,r.l,r.pct==null?'':r.pct/100,r.sw,r.sl,r.gw,r.gl,r.tbW,r.tbN,r.stW,r.stN,r.nc])}
   const ws3=X.utils.aoa_to_sheet(srows);ws3['!cols']=srows[0].map(()=>({wch:14}));
   for(let i=1;i<srows.length;i++){const c=ws3['E'+(i+1)];if(c&&c.v!=='')c.z='0%'}
   X.utils.book_append_sheet(wb,ws3,'Statistiche');
@@ -595,17 +605,14 @@ function homeH(){
   const sec=(c,r,title,cls,tag)=>`<div class="sec ${cls}" role="group" aria-label="${title}">${COURT}
     <div class="sec-h"><h2>${title}</h2><span class="tag">${tag}</span></div>
     <div class="sec-n"><div class="sec-pct">${r.pct==null?'<span style="font-size:44px;opacity:.4">–</span>':r.pct+'<small>%</small>'}</div>
-    <div class="sec-rec"><span class="num"><b>${r.n}</b> partite · <b>${r.w}</b>V <b>${r.l}</b>S</span>${formDots(r.form)}</div></div>
+    <div class="sec-rec"><span class="num"><b>${r.n}</b> ${r.n===1?'partita':'partite'} · <b>${r.w}</b>V <b>${r.l}</b>S${r.nc?' · <b>'+r.nc+'</b> '+(r.nc===1?'non conclusa':'non concluse'):''}</span>${formDots(r.form)}</div></div>
     <div class="sec-act"><button class="btn ${cls==='ag'?'bl':'pri'}" data-act="new" data-cat="${c}">${ic('plus',20)}Nuovo match</button>
     <button class="btn ghost" data-act="histCat" data-cat="${c}">Storico</button></div></div>`;
   return `<div class="top"><div class="brand"><span class="ball" aria-hidden="true"></span><h1>Tennis Tracker</h1></div>
     <button class="icon" data-act="data" aria-label="Dati ed esportazione">${ic('data')}</button></div>
   ${isDemo()?'<div class="demo"><span>Stai vedendo partite di esempio.</span><button data-act="clearDemo">Elimina esempi</button></div>':''}
-  <section class="sum" aria-label="Riepilogo generale">
-    <div class="sum-grid"><div class="stat"><b>${all.n}</b><span>Partite</span></div><div class="stat w"><b>${all.w}</b><span>Vittorie</span></div>
-    <div class="stat l"><b>${all.l}</b><span>Sconfitte</span></div><div class="stat"><b>${all.pct==null?'–':all.pct+'%'}</b><span>Vittorie %</span></div></div>
-    <div class="bar" aria-hidden="true"><i style="width:${all.pct||0}%"></i></div></section>
-  ${sec('amichevole',am,'Amichevoli','am','Per divertimento')}
+  ${all.n?`<p class="tot num"><b>${all.n}</b> ${all.n===1?'partita disputata':'partite disputate'}</p>`:''}
+  ${sec('amichevole',am,'Allenamento','am','Per prepararsi')}
   ${sec('agonistico',ag,'Agonismo','ag','Tornei e campionati')}
   ${nxt?`<button class="next" data-act="open" data-id="${nxt.id}"><div class="d">${parseD(nxt.date).getDate()}<small>${MES[parseD(nxt.date).getMonth()]}</small></div>
     <div class="t"><b>Prossima: ${esc(oppName(nxt.oppId))}</b><span class="muted">${fmtD(nxt.date)}${nxt.time?' · '+nxt.time:''} · ${CAT[nxt.cat]}</span></div>${ic('chev')}</button>`:''}
@@ -630,12 +637,12 @@ function filtered(){
     return true}).sort((a,b)=>ord(b,a));
 }
 function mcard(m){
-  const d=parseD(m.date),st=m.status,b=st==='giocato'?'<div class="badge '+m.result+'">'+m.result+'</div>':st==='programmato'?'<div class="badge P">Prog.</div>':'<div class="badge A">Ann.</div>';
+  const d=parseD(m.date),st=m.status,b=st==='giocato'?(m.result==='N'?'<div class="badge N" aria-label="Non conclusa">–</div>':'<div class="badge '+m.result+'">'+m.result+'</div>'):st==='programmato'?'<div class="badge P">Prog.</div>':'<div class="badge A">Ann.</div>';
   return `<button class="mcard ${st==='annullato'?'canc':''}" data-act="open" data-id="${m.id}">
     <div class="mc-d">${d.getDate()}<small>${MES[d.getMonth()]} ${String(d.getFullYear()).slice(2)}</small></div>
     <div class="mc-m"><span class="mc-o">${esc(oppName(m.oppId))}</span>
     ${st==='giocato'?sbH(m):''}
-    <span class="mc-t"><span class="pill ${m.cat==='agonistico'?'ag':'am'}">${m.cat==='agonistico'?'Agonismo':'Amichevole'}</span><span><i class="sdot s-${m.surface}"></i>${esc(SURF[m.surface]||'')}</span>${st==='programmato'&&m.time?'<span>'+m.time+'</span>':''}${m.torneo?'<span>'+esc(m.torneo)+'</span>':''}</span></div>${b}</button>`;
+    <span class="mc-t"><span class="pill ${m.cat==='agonistico'?'ag':'am'}">${m.cat==='agonistico'?'Agonismo':'Allenamento'}</span><span><i class="sdot s-${m.surface}"></i>${esc(SURF[m.surface]||'')}</span>${st==='programmato'&&m.time?'<span>'+m.time+'</span>':''}${m.torneo?'<span>'+esc(m.torneo)+'</span>':''}</span></div>${b}</button>`;
 }
 function histList(){
   const l=filtered();
@@ -650,7 +657,7 @@ function histH(){
   <div class="fbar"><div class="search" style="flex:1"><label class="sr" for="hq" style="position:absolute;left:-9999px">Cerca</label>${ic('search',20)}<input class="in" id="hq" data-flt="q" type="search" placeholder="Cerca avversario, torneo, circolo" value="${esc(F.q)}" autocomplete="off"></div>
   <button class="icon" data-act="togF" aria-label="Filtri" aria-expanded="${F.open}" style="${n?'background:var(--solid);color:var(--solid-ink)':''}">${ic('filter')}</button></div>
   ${F.open?`<div class="fs">
-   <div class="field"><label>Categoria</label><div class="chips">${chipS('cat','','Tutte')}${chipS('cat','amichevole','Amichevoli')}${chipS('cat','agonistico','Agonismo')}</div></div>
+   <div class="field"><label>Categoria</label><div class="chips">${chipS('cat','','Tutte')}${chipS('cat','amichevole','Allenamento')}${chipS('cat','agonistico','Agonismo')}</div></div>
    <div class="field"><label>Stato</label><div class="chips">${chipS('status','','Tutti')}${chipS('status','giocato','Giocati')}${chipS('status','programmato','Programmati')}${chipS('status','annullato','Annullati')}</div></div>
    <div class="field"><label>Superficie</label><div class="chips">${chipS('surf','','Tutte')}${Object.entries(SURF).map(([k,v])=>chipS('surf',k,'<i class="sdot s-'+k+'"></i>'+v)).join('')}</div></div>
    <div class="field"><label for="fo">Avversario</label><select class="in" id="fo" data-flt="opp"><option value="">Tutti</option>${opps.map(o=>`<option value="${o.id}" ${F.opp===o.id?'selected':''}>${esc(o.name)}</option>`).join('')}</select></div>
@@ -680,7 +687,7 @@ function nice(min,max){
 }
 const shortD=s=>{const d=parseD(s);return d.getDate()+' '+MES[d.getMonth()]};
 function sbH(m,big){
-  const sets=m.sets||[];
+  const sets=m.sets||[];if(!sets.length)return '';
   const cell=(s,side)=>{
     const win=side==='me'?s.me>s.opp:s.opp>s.me,v=side==='me'?s.me:s.opp;
     const tb=isTb(s)&&s.tb!=null&&!win?'<sup>'+s.tb+'</sup>':'';
@@ -693,7 +700,7 @@ function barsSVG(pts,o){
   const Y=v=>T+ih*(1-v/o.hi);
   let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.label)}">`;
   for(const t of o.ticks)s+=`<path class="gl" d="M${L} ${Y(t).toFixed(1)}H${W-R}"/><text class="tx" x="${L-6}" y="${(Y(t)+4).toFixed(1)}" text-anchor="end">${o.fmt(t)}</text>`;
-  pts.forEach((p,i)=>{const y=Y(p.y),h=Math.max(1,T+ih-y),w=p.res==='V';s+=`<rect x="${(x0+i*(bw+gap)).toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="${w?'var(--green)':'var(--loss)'}"><title>${esc(p.tip)}</title></rect>`});
+  pts.forEach((p,i)=>{const y=Y(p.y),h=Math.max(1,T+ih-y),w=p.res==='V',nn=p.res==='N';s+=`<rect x="${(x0+i*(bw+gap)).toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="${nn?'var(--ink2)':w?'var(--green)':'var(--loss)'}"><title>${esc(p.tip)}</title></rect>`});
   s+=`<text class="tx" x="${L}" y="${H-6}">${esc(pts[0].d)}</text>`;if(n>1)s+=`<text class="tx" x="${W-R}" y="${H-6}" text-anchor="end">${esc(pts[n-1].d)}</text>`;
   return s+'</svg>';
 }
@@ -701,7 +708,7 @@ const EB='<svg class="eb" width="64" height="64" viewBox="0 0 64 64" fill="none"
 function stripSVG(l){
   const W=340,H=70,n=l.length,gap=3,bw=Math.max(4,Math.min(18,(W-20-gap*(n-1))/n)),tot=n*bw+(n-1)*gap,x0=(W-tot)/2;
   let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Vittorie e sconfitte in ordine di data"><path class="ax" d="M10 35H${W-10}"/>`;
-  l.forEach((m,i)=>{const w=m.result==='V';s+=`<rect class="${w?'barW':'barL'}" x="${(x0+i*(bw+gap)).toFixed(1)}" y="${w?5:35}" width="${bw}" height="30" rx="2" fill="${w?'var(--green)':'var(--loss)'}"><title>${esc(shortD(m.date)+' · '+oppName(m.oppId)+' · '+scoreTxt(m))}</title></rect>`});
+  l.forEach((m,i)=>{const w=m.result==='V',nn=m.result==='N';s+=`<rect class="${w?'barW':'barL'}" x="${(x0+i*(bw+gap)).toFixed(1)}" y="${nn?32:w?5:35}" width="${bw}" height="${nn?6:30}" rx="2" fill="${nn?'var(--ink2)':w?'var(--green)':'var(--loss)'}"><title>${esc(shortD(m.date)+' · '+oppName(m.oppId)+' · '+scoreTxt(m))}</title></rect>`});
   return s+'</svg>';
 }
 function statsH(){
@@ -711,9 +718,9 @@ function statsH(){
     body=`<div class="empty">${EB}<p>Nessuna partita giocata in questa categoria.</p><button class="btn pri" style="flex:none" data-act="new" data-cat="${cat}">${ic('plus',20)}Registra un match</button></div>`;
   }else if(ST.tab==='riep'){
     const ph=avgPhys(list),has=MET.some(x=>ph[x.k]!=null);
-    const surf=Object.keys(SURF).map(k=>{const s=summ(list.filter(m=>m.surface===k));return s.n?`<tr><td><i class="sdot s-${k}"></i>${SURF[k]}</td><td>${s.n}</td><td>${s.w}</td><td>${s.l}</td><td>${s.pct}%</td></tr>`:''}).join('');
+    const surf=Object.keys(SURF).map(k=>{const s=summ(list.filter(m=>m.surface===k));return s.n?`<tr><td><i class="sdot s-${k}"></i>${SURF[k]}</td><td>${s.n}</td><td>${s.w}</td><td>${s.l}</td><td>${s.pct==null?'–':s.pct+'%'}</td></tr>`:''}).join('');
     body=`<div class="hero ${isA?'am':''}">${COURT}<div class="sec-h"><span class="tag" style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;opacity:.75">Vittorie</span></div>
-      <div class="big">${r.pct}<small>%</small></div><div class="num"><b>${r.n}</b> partite · <b>${r.w}</b> vinte · <b>${r.l}</b> perse</div>${formDots(r.form)}</div>
+      <div class="big">${r.pct==null?'–':r.pct+'<small>%</small>'}</div><div class="num"><b>${r.n}</b> ${r.n===1?'partita':'partite'} · <b>${r.w}</b> vinte · <b>${r.l}</b> perse${r.nc?' · <b>'+r.nc+'</b> non '+(r.nc===1?'conclusa':'concluse'):''}</div>${formDots(r.form)}</div>
     <div class="tiles">
      <div class="tile"><span>Set</span><b>${r.sw}–${r.sl}</b><small>vinti – persi</small></div>
      <div class="tile"><span>Game</span><b>${r.gw}–${r.gl}</b><small>vinti – persi</small></div>
@@ -725,32 +732,32 @@ function statsH(){
     ${has?`<div class="card"><h3>Dati fisici medi</h3><div class="tiles">${MET.filter(x=>ph[x.k]!=null).map(x=>`<div class="tile"><span>${x.l}</span><b>${nf(ph[x.k],x.d===2?1:0)}</b><small>${x.u||'a partita'}</small></div>`).join('')}</div></div>`:''}`;
   }else if(ST.tab==='opp'){
     const rows=S.opponents.map(o=>{const s=summ(list.filter(m=>m.oppId===o.id));return{o,s}});
-    const sorters={inc:(a,b)=>b.s.n-a.s.n||a.o.name.localeCompare(b.o.name,'it'),pct:(a,b)=>(b.s.n?b.s.pct:-1)-(a.s.n?a.s.pct:-1)||b.s.n-a.s.n,ost:(a,b)=>(a.s.n?a.s.pct:999)-(b.s.n?b.s.pct:999)||b.s.n-a.s.n};
+    const sorters={inc:(a,b)=>b.s.n-a.s.n||a.o.name.localeCompare(b.o.name,'it'),pct:(a,b)=>(b.s.pct==null?-1:b.s.pct)-(a.s.pct==null?-1:a.s.pct)||b.s.n-a.s.n,ost:(a,b)=>(a.s.pct==null?999:a.s.pct)-(b.s.pct==null?999:b.s.pct)||b.s.n-a.s.n};
     rows.sort(sorters[ST.sort]);
     const ch=(v,l)=>`<button class="chip" data-act="sort" data-v="${v}" aria-pressed="${ST.sort===v}">${l}</button>`;
     body=`<div class="chips">${ch('inc','Più incontrati')}${ch('pct','Più battuti')}${ch('ost','Più ostici')}</div>
     <div class="list">${rows.length?rows.map((x,i)=>`<button class="orow" data-act="opp" data-id="${x.o.id}"><span class="pos">${i+1}</span>
-      <span class="n"><b>${esc(x.o.name)}</b><span class="muted" style="font-size:13px">${x.o.rank?'Classifica '+esc(x.o.rank)+' · ':''}${x.s.n?x.s.w+'V '+x.s.l+'S':'nessuna partita'}</span>${x.s.n?`<div class="mini"><i style="width:${x.s.pct}%"></i></div>`:''}</span>
-      <span class="r">${x.s.n?x.s.pct+'%':'–'}<small>${x.s.n} part.</small></span></button>`).join(''):'<div class="empty">'+EB+'<p>Nessun avversario in archivio.</p></div>'}</div>
+      <span class="n"><b>${esc(x.o.name)}</b><span class="muted" style="font-size:13px">${x.o.rank?'Classifica '+esc(x.o.rank)+' · ':''}${x.s.n?x.s.w+'V '+x.s.l+'S':'nessuna partita'}</span>${x.s.pct!=null?`<div class="mini"><i style="width:${x.s.pct}%"></i></div>`:''}</span>
+      <span class="r">${x.s.pct!=null?x.s.pct+'%':'–'}<small>${x.s.n} part.</small></span></button>`).join(''):'<div class="empty">'+EB+'<p>Nessun avversario in archivio.</p></div>'}</div>
     <button class="btn sec2" data-act="oppNew">${ic('plus',20)}Aggiungi avversario</button>`;
   }else{
-    const l=[...list].sort(ord);let w=0;
-    const pts=l.map((m,i)=>{if(m.result==='V')w++;return{y:Math.round(w/(i+1)*100),res:m.result,d:shortD(m.date),tip:shortD(m.date)+' · '+oppName(m.oppId)+' · '+scoreTxt(m)+' · '+Math.round(w/(i+1)*100)+'% vittorie'}});
+    const l=[...list].sort(ord),ld=l.filter(m=>m.result!=='N');let w=0;
+    const pts=ld.map((m,i)=>{if(m.result==='V')w++;return{y:Math.round(w/(i+1)*100),res:m.result,d:shortD(m.date),tip:shortD(m.date)+' · '+oppName(m.oppId)+' · '+scoreTxt(m)+' · '+Math.round(w/(i+1)*100)+'% vittorie'}});
     const mt=MET.find(x=>x.k===ST.metric),mp=l.filter(m=>m.phys&&m.phys[mt.k]!=null).map(m=>({y:m.phys[mt.k],res:m.result,d:shortD(m.date),tip:shortD(m.date)+' · '+oppName(m.oppId)+' · '+nf(m.phys[mt.k],mt.d)+' '+mt.u}));
     let phys='<p class="muted">Nessun dato inserito per questa misura.</p>';
     if(mp.length){const vs=mp.map(p=>p.y),nc=nice(Math.min(...vs),Math.max(...vs)),nb=nice(0,Math.max(1,...vs)),av=r=>{const a=mp.filter(p=>p.res===r).map(p=>p.y);return a.length?nf(a.reduce((x,y)=>x+y,0)/a.length,mt.d):'–'};
       phys=`<div class="chartbox">${chartSVG(mp,{lo:nc.lo,hi:nc.hi,ticks:nc.ticks,fmt:v=>nf(v,mt.d),unit:mt.u?' '+mt.u:'',label:'Andamento '+mt.l})}</div>
-      <h4 class="sub2">Una barra per partita, colorata per esito</h4><div class="chartbox">${barsSVG(mp,{hi:nb.hi,ticks:nb.ticks,fmt:v=>nf(v,mt.d),label:mt.l+' per partita, colorata per esito'})}</div><div class="legend"><span><i style="background:var(--green)"></i>Vittoria · media ${av('V')}</span><span><i style="background:var(--loss)"></i>Sconfitta · media ${av('S')}</span></div>
+      <h4 class="sub2">Una barra per partita, colorata per esito</h4><div class="chartbox">${barsSVG(mp,{hi:nb.hi,ticks:nb.ticks,fmt:v=>nf(v,mt.d),label:mt.l+' per partita, colorata per esito'})}</div><div class="legend"><span><i style="background:var(--green)"></i>Vittoria · media ${av('V')}</span><span><i style="background:var(--loss)"></i>Sconfitta · media ${av('S')}</span>${mp.some(p=>p.res==='N')?'<span><i style="background:var(--ink2)"></i>Non conclusa · media '+av('N')+'</span>':''}</div>
       <p class="muted num" style="font-size:13px">Min ${nf(Math.min(...vs),mt.d)} · Media ${nf(vs.reduce((a,b)=>a+b,0)/vs.length,mt.d)} · Max ${nf(Math.max(...vs),mt.d)} ${mt.u}</p>`}
-    body=`<div class="card"><h3>Andamento vittorie</h3><div class="chartbox">${chartSVG(pts,{lo:0,hi:100,ticks:[0,25,50,75,100],fmt:v=>v+'%',res:true,label:'Percentuale di vittorie dopo ogni partita'})}</div>
+    body=`<div class="card"><h3>Andamento vittorie</h3><div class="chartbox">${pts.length?chartSVG(pts,{lo:0,hi:100,ticks:[0,25,50,75,100],fmt:v=>v+'%',res:true,label:'Percentuale di vittorie dopo ogni partita'}):'<p class="muted">Nessuna partita conclusa.</p>'}</div>
       <p class="muted" style="font-size:13px">Percentuale di vittorie dopo ogni partita. Ogni punto è un match.</p></div>
-      <div class="card"><h3>Risultati</h3><div class="chartbox">${stripSVG(l)}</div><div class="legend"><span><i style="background:var(--green)"></i>Vittoria</span><span><i style="background:var(--loss)"></i>Sconfitta</span></div></div>
-      <div class="card"><h3>Per superficie</h3><div class="sbars">${Object.keys(SURF).map(k=>{const q2=summ(l.filter(m=>m.surface===k));return q2.n?`<div class="sbr"><span class="lab"><i class="sdot s-${k}"></i>${SURF[k]}</span><div class="trk"><i class="s-${k}" style="width:${q2.pct}%"></i></div><span class="val num">${q2.pct}%<small>${q2.w}V ${q2.l}S</small></span></div>`:''}).join('')}</div></div>
+      <div class="card"><h3>Risultati</h3><div class="chartbox">${stripSVG(l)}</div><div class="legend"><span><i style="background:var(--green)"></i>Vittoria</span><span><i style="background:var(--loss)"></i>Sconfitta</span><span><i style="background:var(--ink2)"></i>Non conclusa</span></div></div>
+      <div class="card"><h3>Per superficie</h3><div class="sbars">${Object.keys(SURF).map(k=>{const q2=summ(l.filter(m=>m.surface===k));return q2.pct!=null?`<div class="sbr"><span class="lab"><i class="sdot s-${k}"></i>${SURF[k]}</span><div class="trk"><i class="s-${k}" style="width:${q2.pct}%"></i></div><span class="val num">${q2.pct}%<small>${q2.w}V ${q2.l}S</small></span></div>`:''}).join('')}</div></div>
       <div class="card"><h3>Dati fisici</h3><div class="chips">${MET.map(x=>`<button class="chip" data-act="metric" data-v="${x.k}" aria-pressed="${ST.metric===x.k}">${x.l}</button>`).join('')}</div>${phys}</div>`;
   }
   const tab=(v,l)=>`<button data-act="stab" data-v="${v}" aria-pressed="${ST.tab===v}">${l}</button>`;
   return `<div class="h"><h1>Statistiche</h1><button class="pillbtn" data-act="dataStats">${ic('data',20)}Esporta</button></div>
-  <div class="seg big"><button class="c-am" data-act="scat" data-v="amichevole" aria-pressed="${ST.cat==='amichevole'}">Amichevoli</button><button class="c-ag" data-act="scat" data-v="agonistico" aria-pressed="${ST.cat==='agonistico'}">Agonismo</button></div>
+  <div class="seg big"><button class="c-am" data-act="scat" data-v="amichevole" aria-pressed="${ST.cat==='amichevole'}">Allenamento</button><button class="c-ag" data-act="scat" data-v="agonistico" aria-pressed="${ST.cat==='agonistico'}">Agonismo</button></div>
   <div class="seg">${tab('riep','Riepilogo')}${tab('opp','Avversari')}${tab('graf','Grafici')}</div>${body}`;
 }
 
@@ -770,7 +777,7 @@ function calH(){
   return `<div class="h"><h1>Calendario</h1></div>
   <div class="calh"><button class="icon" data-act="mon" data-d="-1" aria-label="Mese precedente">${ic('back')}</button><h2>${MESL[m]} ${y}</h2><button class="icon" data-act="mon" data-d="1" aria-label="Mese successivo">${ic('chev')}</button></div>
   <div class="cal">${cells}</div>
-  <div class="legend"><span><i style="background:var(--green)"></i>Vinta</span><span><i style="background:var(--loss)"></i>Persa</span><span><i style="border:2px solid var(--green)"></i>Programmata</span><span><i style="background:var(--ink2);opacity:.5"></i>Annullata</span></div>
+  <div class="legend"><span><i style="background:var(--green)"></i>Vinta</span><span><i style="background:var(--loss)"></i>Persa</span><span><i style="border:2px solid var(--green)"></i>Programmata</span><span><i style="background:var(--ink2);opacity:.5"></i>Annullata</span><span><i style="background:var(--ball);box-shadow:inset 0 0 0 1.5px var(--ink2)"></i>Non conclusa</span></div>
   <div class="card"><h3>${fmtD(CAL.sel)}</h3>${sel.length?'<div class="list">'+sel.map(mcard).join('')+'</div>':'<p class="muted">Nessuna partita in questa data.</p>'}
     <button class="btn pri" data-act="newOn" style="flex:none">${ic('plus',20)}Programma un match</button></div>
   ${up.length?`<div class="card"><h3>Prossime partite</h3><div class="list">${up.map(mcard).join('')}</div></div>`:''}`;
@@ -781,7 +788,7 @@ function blank(o){
   o=o||{};const p=S.prefs||{};
   return{id:null,open:{},oppQ:'',quickErr:'',cat:o.cat||'amichevole',status:o.status||'giocato',oppId:o.oppId||'',newName:'',newRank:'',date:o.date||today(),time:'',club:o.club!=null?o.club:(p.club||''),place:o.place!=null?o.place:(p.place||''),surface:o.surface||p.surface||'terra',torneo:'',turno:'',oppRank:'',note:'',phys:{},sets:[{me:0,opp:0,tb:null,stb:false},{me:0,opp:0,tb:null,stb:false}],result:null,demo:false};
 }
-function autoResult(){const x=wl({sets:DRAFT.sets});if(x.w>x.l)DRAFT.result='V';else if(x.l>x.w)DRAFT.result='S'}
+function autoResult(){if(DRAFT.result==='N')return;const x=wl({sets:DRAFT.sets});if(x.w>x.l)DRAFT.result='V';else if(x.l>x.w)DRAFT.result='S'}
 function parseScore(txt){
   const toks=txt.trim().split(/[\s,;]+/).filter(Boolean),sets=[];
   for(const t0 of toks){
@@ -836,8 +843,8 @@ function setsH(d){
   const qt=d.sets.some(s=>s.me||s.opp)?scoreTxt({sets:d.sets}):'';
   const quick=`<div class="field"><label for="f-quick">Punteggio rapido</label><input class="in" id="f-quick" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="es. 6-4 3-6 [10-8]" value="${esc(qt)}"><span class="hint">Set separati da uno spazio. Tie-break: 7-6(4). Super tie-break: [10-8].</span>${d.quickErr?`<span class="qerr" role="alert">${esc(d.quickErr)}</span>`:''}</div>`;
   return quick+rows+`<div class="addrow"><button type="button" class="btn sec2" data-act="setAdd" ${canAdd?'':'disabled'}>${ic('plus',18)}Set</button><button type="button" class="btn sec2" data-act="stbAdd" ${hasStb||!d.sets.length||d.sets.length>=5?'disabled':''}>${ic('plus',18)}Super tie-break</button></div>
-  <div class="field"><label>Esito</label><div class="seg big"><button type="button" class="c-ag" data-act="pick" data-f="result" data-v="V" aria-pressed="${d.result==='V'}">Vittoria</button><button type="button" class="c-loss" data-act="pick" data-f="result" data-v="S" aria-pressed="${d.result==='S'}">Sconfitta</button></div>
-  ${d.result?'':'<span class="muted" style="font-size:13px">Il risultato è in parità: scegli l\'esito (ad esempio per un ritiro).</span>'}</div>`;
+  <div class="field"><label>Esito</label><div class="seg big three"><button type="button" class="c-ag" data-act="pick" data-f="result" data-v="V" aria-pressed="${d.result==='V'}">Vittoria</button><button type="button" class="c-loss" data-act="pick" data-f="result" data-v="S" aria-pressed="${d.result==='S'}">Sconfitta</button><button type="button" class="c-nc" data-act="pick" data-f="result" data-v="N" aria-pressed="${d.result==='N'}">Non conclusa</button></div>
+  ${d.result==='N'?'<span class="hint">Non conta nella percentuale di vittorie né nelle statistiche di set e game.</span>':''}${d.result?'':'<span class="muted" style="font-size:13px">Scegli l\'esito. Se il match si è fermato o è finito pari (ritiro, pioggia, tempo scaduto), scegli «Non conclusa».</span>'}</div>`;
 }
 function formH(){
   const d=DRAFT,pl=d.status==='giocato',ag=d.cat==='agonistico';
@@ -848,7 +855,7 @@ function formH(){
   const hasPhys=Object.values(d.phys).some(v=>v!=null);
   return `<div class="fhead"><button class="icon" data-act="formCancel" aria-label="Indietro">${ic('back')}</button><h1>${d.id?'Modifica match':'Nuovo match'}</h1></div>
   ${ERR?`<div class="alert" role="alert">${esc(ERR)}</div>`:''}
-  <div class="fs"><h3>Categoria</h3><div class="seg big">${pk('cat','amichevole','Amichevole','c-am')}${pk('cat','agonistico','Agonistico','c-ag')}</div>
+  <div class="fs"><h3>Categoria</h3><div class="seg big">${pk('cat','amichevole','Allenamento','c-am')}${pk('cat','agonistico','Agonistico','c-ag')}</div>
     <h3 style="margin-top:6px">Stato</h3><div class="chips">${pk('status','giocato','Giocato')}${pk('status','programmato','Programmato')}${pk('status','annullato','Annullato')}</div></div>
   <div class="fs"><h3>Avversario</h3>${oppPickH()}</div>
   <div class="fs"><h3>Data e superficie</h3><div class="field"><label for="f-date">Data</label><input class="in" id="f-date" type="date" data-f="date" value="${d.date}"></div>
@@ -879,7 +886,7 @@ function saveForm(){
   if(!opp)ERR='Scegli un avversario o aggiungine uno nuovo.';
   else if(opp==='__new__'&&!d.newName.trim())ERR='Scrivi il nome del nuovo avversario.';
   else if(!d.date)ERR='Inserisci la data.';
-  else if(d.status==='giocato'){if(!d.sets.length)ERR='Inserisci almeno un set.';else if(!d.result)ERR='Scegli l\'esito del match.'}
+  else if(d.status==='giocato'){if(!d.result)ERR='Scegli l\'esito del match.';else if(!d.sets.length&&d.result!=='N')ERR='Inserisci almeno un set.'}
   if(ERR){formRerender();window.scrollTo(0,0);return}
   if(opp==='__new__'){const o={id:uid(),name:d.newName.trim(),rank:d.newRank.trim()};S.opponents.push(o);opp=o.id}
   else if(d.cat==='agonistico'&&d.oppRank){const o=oppOf(opp);if(o&&!o.rank)o.rank=d.oppRank}
@@ -887,7 +894,7 @@ function saveForm(){
   const m={id:d.id||uid(),cat:d.cat,status:d.status,oppId:opp,date:d.date,time:d.time||'',club:d.club.trim(),place:d.place.trim(),surface:d.surface,
     torneo:d.cat==='agonistico'?d.torneo.trim():'',turno:d.cat==='agonistico'?d.turno:'',oppRank:d.cat==='agonistico'?d.oppRank.trim():'',note:d.note.trim(),
     phys:pl?Object.fromEntries(Object.entries(d.phys).filter(([,v])=>v!=null)):{},
-    sets:pl?d.sets.map(s=>({me:s.me,opp:s.opp,tb:isTb(s)?(s.tb||0):null,stb:!!s.stb})):[],result:pl?d.result:null};
+    sets:pl?d.sets.filter(s=>d.result!=='N'||s.me||s.opp).map(s=>({me:s.me,opp:s.opp,tb:isTb(s)?(s.tb||0):null,stb:!!s.stb})):[],result:pl?d.result:null};
   const i=S.matches.findIndex(x=>x.id===m.id);if(i>=0)S.matches[i]=m;else S.matches.push(m);
   S.prefs={club:m.club,place:m.place,surface:m.surface};
   save();DRAFT=null;toast(i>=0?'Match aggiornato':'Match salvato');
@@ -905,7 +912,7 @@ function renderSheet(){
     const kv=(k,v)=>v?`<dt>${k}</dt><dd>${v}</dd>`:'';
     h=`<div class="shead"><div style="min-width:0"><span class="pill ${m.cat==='agonistico'?'ag':'am'}">${CAT[m.cat]}</span><h2 style="margin-top:8px">${esc(oppName(m.oppId))}</h2></div>
       <button class="icon" data-act="closeSheet" aria-label="Chiudi">${ic('x')}</button></div>
-    ${m.status==='giocato'?`<div>${sbH(m,true)}<p class="${m.result==='V'?'':'muted'}" style="font-weight:700;color:${m.result==='V'?'var(--green)':'var(--loss)'}">${m.result==='V'?'Vittoria':'Sconfitta'} · set ${x.w}–${x.l}</p></div>`:`<p style="font-weight:700;color:var(--green)">${m.status==='programmato'?'Partita programmata':'Partita annullata'}</p>`}
+    ${m.status==='giocato'?`<div>${sbH(m,true)}<p style="font-weight:700;color:${m.result==='V'?'var(--green)':m.result==='N'?'var(--ink2)':'var(--loss)'}">${m.result==='V'?'Vittoria':m.result==='N'?'Non conclusa':'Sconfitta'}${m.result==='N'?'':' · set '+x.w+'–'+x.l}</p></div>`:`<p style="font-weight:700;color:var(--green)">${m.status==='programmato'?'Partita programmata':'Partita annullata'}</p>`}
     <dl class="kv">${kv('Data',fmtD(m.date)+(m.time?' · '+m.time:''))}${kv('Superficie','<i class="sdot s-'+m.surface+'"></i>'+esc(SURF[m.surface]||''))}${kv('Circolo',esc(m.club))}${kv('Luogo',esc(m.place))}${kv('Torneo',esc(m.torneo))}${kv('Turno',esc(m.turno))}${kv('Classifica avv.',esc(m.oppRank))}${kv('Note',esc(m.note).replace(/\n/g,'<br>'))}</dl>
     ${ph.length?`<div class="tiles">${ph.map(k=>`<div class="tile"><span>${k.l}</span><b>${nf(p[k.k],k.d)}</b><small>${k.u}</small></div>`).join('')}</div>`:''}
     <div class="acts">${m.status==='programmato'?`<button class="btn pri" data-act="played" data-id="${m.id}">Segna come giocato</button>`:''}<button class="btn sec2" data-act="edit" data-id="${m.id}">Modifica</button><button class="btn sec2" data-act="delNow" style="color:var(--loss)">Elimina</button></div>`;
@@ -914,8 +921,8 @@ function renderSheet(){
     const r=h2hSummary(o.id),ms=S.matches.filter(m=>m.oppId===o.id).sort((a,b)=>ord(b,a)).slice(0,6);
     const col=(l,s)=>`<tr><td>${l}</td><td>${s.n}</td><td>${s.w}</td><td>${s.l}</td><td>${s.pct==null?'–':s.pct+'%'}</td></tr>`;
     h=`<div class="shead"><div style="min-width:0"><h2>${esc(o.name)}</h2><p class="muted">${o.rank?'Classifica '+esc(o.rank):'Classifica non indicata'}</p></div><button class="icon" data-act="closeSheet" aria-label="Chiudi">${ic('x')}</button></div>
-    <div class="card"><h3>Testa a testa</h3><div class="hero ${r.all.n?'':'am'}" style="padding:16px"><div class="big" style="font-size:56px">${r.all.w}–${r.all.l}</div><span>${r.all.n?r.all.pct+'% di vittorie · set '+r.all.sw+'–'+r.all.sl+' · game '+r.all.gw+'–'+r.all.gl:'Nessuna partita giocata'}</span></div>
-      <table class="tbl"><thead><tr><th>Categoria</th><th>Part.</th><th>V</th><th>S</th><th>%</th></tr></thead><tbody>${col('Amichevoli',r.am)}${col('Agonismo',r.ag)}</tbody></table></div>
+    <div class="card"><h3>Testa a testa</h3><div class="hero ${r.all.n?'':'am'}" style="padding:16px"><div class="big" style="font-size:56px">${r.all.w}–${r.all.l}</div><span>${r.all.n?(r.all.pct==null?'Nessuna partita conclusa':r.all.pct+'% di vittorie')+' · set '+r.all.sw+'–'+r.all.sl+' · game '+r.all.gw+'–'+r.all.gl:'Nessuna partita giocata'}</span></div>
+      <table class="tbl"><thead><tr><th>Categoria</th><th>Part.</th><th>V</th><th>S</th><th>%</th></tr></thead><tbody>${col('Allenamento',r.am)}${col('Agonismo',r.ag)}</tbody></table></div>
     ${ms.length?`<div class="card"><h3>Ultimi incontri</h3><div class="list">${ms.map(mcard).join('')}</div></div>`:''}
     <div class="acts"><button class="btn pri" data-act="newVs" data-id="${o.id}">${ic('plus',20)}Nuovo match</button><button class="btn sec2" data-act="oppEdit" data-id="${o.id}">Modifica</button></div>`;
   }else if(SH.t==='oedit'){

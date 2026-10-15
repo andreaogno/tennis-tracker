@@ -1,6 +1,6 @@
 /* Tennis Tracker: funzionamento offline.
    Quando pubblichi una nuova versione dell'app, cambia il numero qui sotto (tt-v1 -> tt-v2). */
-const VERSION = 'tt-v1';
+const VERSION = 'tt-v2';
 const FILES = [
   './', 'index.html', 'manifest.webmanifest', 'xlsx.full.min.js',
   'barlow-condensed-latin-500-normal.woff2', 'barlow-condensed-latin-600-normal.woff2',
