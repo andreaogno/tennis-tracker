@@ -1053,6 +1053,7 @@ function injectPWA(){
 load();
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
 loadUI();render();
+if('serviceWorker' in navigator){const had=!!navigator.serviceWorker.controller;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(had&&!DRAFT)location.reload()})}
 if('serviceWorker' in navigator&&location.protocol.startsWith('http')&&document.querySelector('link[rel="manifest"]')){navigator.serviceWorker.register('sw.js').catch(()=>{})}
 })();
 </script>
